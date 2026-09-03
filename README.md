@@ -2,7 +2,7 @@
 
 <div align="center">
 
-  <a href="./docs/gameplay.mp4" title="Assistir ao gameplay">
+  <a href="https://raw.githubusercontent.com/auhauhbr/recoil-gun-jogo/main/docs/gameplay.mp4" title="Assistir ao gameplay">
     <img src="./docs/capa-readme.png" alt="Recoil Gun" width="320">
   </a>
 
@@ -23,7 +23,7 @@
   </p>
 
   <p>
-    <a href="./docs/gameplay.mp4">
+    <a href="https://raw.githubusercontent.com/auhauhbr/recoil-gun-jogo/main/docs/gameplay.mp4">
       <img src="https://img.shields.io/badge/▶_Assistir-gameplay-FF5F57?style=for-the-badge" alt="Assistir ao gameplay">
     </a>
   </p>
