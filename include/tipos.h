@@ -14,9 +14,17 @@ typedef enum
     ESTADO_JOGANDO,
     ESTADO_PAUSADO,
     ESTADO_VITORIA_FASE,
+    ESTADO_INTERVALO_SOBREVIVENCIA,
     ESTADO_DERROTA,
-    ESTADO_FINAL
+    ESTADO_FINAL,
+    ESTADO_FIM_SOBREVIVENCIA
 } EstadoJogo;
+
+typedef enum
+{
+    MODO_CAMPANHA,
+    MODO_SOBREVIVENCIA
+} ModoJogo;
 
 typedef enum
 {
@@ -172,9 +180,17 @@ typedef struct
     bool mundo_criado;
 
     EstadoJogo estado;
+    ModoJogo modo;
     int fase_atual;
     int pontuacao;
     bool sem_audio;
+
+    int onda_sobrevivencia;
+    int vida_sobrevivencia;
+    int recorde_sobrevivencia;
+    int combo;
+    int maior_combo;
+    float tempo_combo;
 
     Arma jogador;
     Arma inimigo;
