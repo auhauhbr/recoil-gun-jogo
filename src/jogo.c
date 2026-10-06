@@ -1286,6 +1286,18 @@ static void iniciar_onda_sobrevivencia(Jogo *jogo)
     jogo->estado = ESTADO_JOGANDO;
 }
 
+static void iniciar_nova_sobrevivencia(Jogo *jogo)
+{
+    jogo->modo = MODO_SOBREVIVENCIA;
+    jogo->pontuacao = 0;
+    jogo->onda_sobrevivencia = 1;
+    jogo->vida_sobrevivencia = 7;
+    jogo->combo = 0;
+    jogo->maior_combo = 0;
+    jogo->tempo_combo = 0.0f;
+    iniciar_onda_sobrevivencia(jogo);
+}
+
 static void trocar_arma_jogador(Jogo *jogo, TipoArma tipo)
 {
     jogo->arma_selecionada = tipo;
@@ -1295,6 +1307,32 @@ static void trocar_arma_jogador(Jogo *jogo, TipoArma tipo)
 
 static void verificar_fim_fase(Jogo *jogo)
 {
+    if (jogo->modo == MODO_SOBREVIVENCIA)
+    {
+        if (jogo->inimigo.vida <= 0)
+        {
+            jogo->inimigo.vida = 0;
+            jogo->vida_sobrevivencia = jogo->jogador.vida + 1;
+            if (jogo->vida_sobrevivencia > 7)
+            {
+                jogo->vida_sobrevivencia = 7;
+            }
+
+            jogo->pontuacao += 500 + jogo->onda_sobrevivencia * 200;
+            atualizar_recorde_sobrevivencia(jogo);
+            jogo->estado = ESTADO_INTERVALO_SOBREVIVENCIA;
+            jogo->tempo_estado = 0.0f;
+        }
+        else if (jogo->jogador.vida <= 0)
+        {
+            jogo->jogador.vida = 0;
+            atualizar_recorde_sobrevivencia(jogo);
+            jogo->estado = ESTADO_FIM_SOBREVIVENCIA;
+            jogo->tempo_estado = 0.0f;
+        }
+        return;
+    }
+
     if (jogo->inimigo.vida <= 0)
     {
         jogo->inimigo.vida = 0;
@@ -1372,20 +1410,50 @@ static void atualizar_menu(Jogo *jogo, Assets *assets, bool clicou, Vector2 curs
         (clicou && CheckCollisionPointRec(cursor, botao_sobrevivencia())))
     {
         tocar_som_seguro(jogo->sem_audio, assets->clique);
-        jogo->modo = MODO_SOBREVIVENCIA;
-        jogo->pontuacao = 0;
-        jogo->onda_sobrevivencia = 1;
-        jogo->vida_sobrevivencia = 7;
-        jogo->combo = 0;
-        jogo->maior_combo = 0;
-        jogo->tempo_combo = 0.0f;
-        iniciar_onda_sobrevivencia(jogo);
+        iniciar_nova_sobrevivencia(jogo);
     }
 }
 
 static void atualizar_estado_finalizado(Jogo *jogo, Assets *assets, bool clicou, Vector2 cursor)
 {
     jogo->tempo_estado += GetFrameTime();
+
+    if (jogo->estado == ESTADO_FIM_SOBREVIVENCIA)
+    {
+        if (IsKeyPressed(KEY_R))
+        {
+            tocar_som_seguro(jogo->sem_audio, assets->clique);
+            iniciar_nova_sobrevivencia(jogo);
+            return;
+        }
+
+        if (IsKeyPressed(KEY_ENTER) ||
+            (clicou && CheckCollisionPointRec(cursor, botao_continuar())))
+        {
+            tocar_som_seguro(jogo->sem_audio, assets->clique);
+            if (jogo->mundo_criado)
+            {
+                b2DestroyWorld(jogo->mundo);
+                jogo->mundo_criado = false;
+            }
+            jogo->estado = ESTADO_MENU;
+        }
+        return;
+    }
+
+    if (jogo->estado == ESTADO_INTERVALO_SOBREVIVENCIA)
+    {
+        if (IsKeyPressed(KEY_ENTER) ||
+            (clicou && CheckCollisionPointRec(cursor, botao_continuar())))
+        {
+            tocar_som_seguro(jogo->sem_audio, assets->clique);
+            jogo->onda_sobrevivencia++;
+            jogo->combo = 0;
+            jogo->tempo_combo = 0.0f;
+            iniciar_onda_sobrevivencia(jogo);
+        }
+        return;
+    }
 
     if (jogo->estado == ESTADO_DERROTA)
     {
@@ -1454,8 +1522,10 @@ void jogo_atualizar(Jogo *jogo, Assets *assets, float delta)
     }
 
     if (jogo->estado == ESTADO_VITORIA_FASE ||
+        jogo->estado == ESTADO_INTERVALO_SOBREVIVENCIA ||
         jogo->estado == ESTADO_DERROTA ||
-        jogo->estado == ESTADO_FINAL)
+        jogo->estado == ESTADO_FINAL ||
+        jogo->estado == ESTADO_FIM_SOBREVIVENCIA)
     {
         atualizar_estado_finalizado(jogo, assets, clicou, cursor);
         atualizar_particulas(jogo, delta);
@@ -1481,7 +1551,7 @@ void jogo_atualizar(Jogo *jogo, Assets *assets, float delta)
     {
         if (jogo->modo == MODO_SOBREVIVENCIA)
         {
-            iniciar_onda_sobrevivencia(jogo);
+            iniciar_nova_sobrevivencia(jogo);
         }
         else
         {
@@ -1806,11 +1876,24 @@ static void desenhar_barra_vida(float x, float y, float largura, const Arma *arm
 
 static void desenhar_hud(const Jogo *jogo)
 {
-    DefinicaoFase fase = fase_obter(jogo->fase_atual);
-
-    DrawText(TextFormat("FASE %d/%d", jogo->fase_atual + 1, TOTAL_FASES), 20, 14, 18, RAYWHITE);
-    DrawText(fase.nome, 20, 36, 14, GRAY);
-    DrawText(TextFormat("PONTOS %05d", jogo->pontuacao), 20, 61, 16, YELLOW);
+    if (jogo->modo == MODO_SOBREVIVENCIA)
+    {
+        DrawText("SOBREVIVÊNCIA", 20, 14, 16, RAYWHITE);
+        DrawText(TextFormat("ONDA %02d", jogo->onda_sobrevivencia), 20, 36, 16, SKYBLUE);
+        DrawText(TextFormat("PONTOS %05d", jogo->pontuacao), 20, 61, 16, YELLOW);
+        DrawText(TextFormat("REC %05d", jogo->recorde_sobrevivencia), 180, 63, 12, GRAY);
+        if (jogo->combo > 0)
+        {
+            DrawText(TextFormat("COMBO x%d", jogo->combo), 20, 82, 13, ORANGE);
+        }
+    }
+    else
+    {
+        DefinicaoFase fase = fase_obter(jogo->fase_atual);
+        DrawText(TextFormat("FASE %d/%d", jogo->fase_atual + 1, TOTAL_FASES), 20, 14, 18, RAYWHITE);
+        DrawText(fase.nome, 20, 36, 14, GRAY);
+        DrawText(TextFormat("PONTOS %05d", jogo->pontuacao), 20, 61, 16, YELLOW);
+    }
 
     desenhar_barra_vida(178.0f, 18.0f, 125.0f, &jogo->jogador, (Color){60, 220, 135, 255});
     desenhar_barra_vida(178.0f, 40.0f, 125.0f, &jogo->inimigo, (Color){238, 78, 92, 255});
@@ -1962,10 +2045,14 @@ static void desenhar_menu(const Jogo *jogo, const Assets *assets)
     DrawRectangleRoundedLinesEx(sobrevivencia, 0.18f, 8, 2.0f, SKYBLUE);
     DrawText("SOBREVIVÊNCIA", 181, 766, 20, RAYWHITE);
 
-    DrawText("ENTER = campanha | S = sobrevivência", 140, 820, 13, LIGHTGRAY);
-    DrawText("PC: ESPAÇO/clique = tiro | 1 2 3 = arma | P = pausa", 58, 848, 13, GRAY);
-    DrawText("Mobile: toque = tiro | toque nos botões = trocar arma", 55, 871, 13, GRAY);
-    DrawText("M = áudio | R = reiniciar", 173, 898, 13, GRAY);
+    DrawText(
+        TextFormat("RECORDE SOBREVIVÊNCIA: %05d", jogo->recorde_sobrevivencia),
+        151, 817, 12, YELLOW
+    );
+    DrawText("ENTER = campanha | S = sobrevivência", 140, 839, 13, LIGHTGRAY);
+    DrawText("PC: ESPAÇO/clique = tiro | 1 2 3 = arma | P = pausa", 58, 862, 13, GRAY);
+    DrawText("Mobile: toque = tiro | toque nos botões = trocar arma", 55, 885, 13, GRAY);
+    DrawText("M = áudio | R = reiniciar", 173, 908, 13, GRAY);
 }
 
 void jogo_desenhar(const Jogo *jogo, const Assets *assets)
@@ -2001,9 +2088,36 @@ void jogo_desenhar(const Jogo *jogo, const Assets *assets)
             desenhar_overlay("FASE LIMPA!", "O próximo duelo será mais caótico.", "PRÓXIMA FASE");
         }
     }
+    else if (jogo->estado == ESTADO_INTERVALO_SOBREVIVENCIA)
+    {
+        char titulo[64];
+        char subtitulo[96];
+        snprintf(titulo, sizeof(titulo), "ONDA %d LIMPA!", jogo->onda_sobrevivencia);
+        snprintf(
+            subtitulo,
+            sizeof(subtitulo),
+            "+%d pontos | +1 vida até o limite",
+            500 + jogo->onda_sobrevivencia * 200
+        );
+        desenhar_overlay(titulo, subtitulo, "PRÓXIMA ONDA");
+    }
     else if (jogo->estado == ESTADO_DERROTA)
     {
         desenhar_overlay("DERROTA", "Ajuste o tempo dos disparos e tente de novo.", "REPETIR FASE");
+    }
+    else if (jogo->estado == ESTADO_FIM_SOBREVIVENCIA)
+    {
+        DrawRectangle(0, 0, LARGURA_LOGICA, ALTURA_LOGICA, Fade(BLACK, 0.80f));
+        DrawText("FIM DA SOBREVIVÊNCIA", 77, 335, 28, RAYWHITE);
+        DrawText(TextFormat("ONDA ALCANÇADA: %d", jogo->onda_sobrevivencia), 151, 390, 18, SKYBLUE);
+        DrawText(TextFormat("PONTUAÇÃO: %d", jogo->pontuacao), 171, 425, 18, YELLOW);
+        DrawText(TextFormat("RECORDE: %d", jogo->recorde_sobrevivencia), 180, 460, 18, GOLD);
+        DrawText(TextFormat("MAIOR COMBO: x%d", jogo->maior_combo), 165, 495, 16, ORANGE);
+        Rectangle area = botao_continuar();
+        DrawRectangleRounded(area, 0.18f, 8, (Color){67, 88, 140, 255});
+        DrawRectangleRoundedLinesEx(area, 0.18f, 8, 2.0f, SKYBLUE);
+        DrawText("VOLTAR AO MENU", 188, 677, 18, RAYWHITE);
+        DrawText("R = jogar novamente", 191, 742, 14, LIGHTGRAY);
     }
     else if (jogo->estado == ESTADO_FINAL)
     {
