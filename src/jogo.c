@@ -136,7 +136,12 @@ static Rectangle botao_arma(int indice)
 
 static Rectangle botao_jogar(void)
 {
-    return (Rectangle){155.0f, 710.0f, 230.0f, 64.0f};
+    return (Rectangle){155.0f, 680.0f, 230.0f, 56.0f};
+}
+
+static Rectangle botao_sobrevivencia(void)
+{
+    return (Rectangle){155.0f, 748.0f, 230.0f, 56.0f};
 }
 
 static Rectangle botao_continuar(void)
@@ -1108,6 +1113,7 @@ void jogo_inicializar(Jogo *jogo)
 {
     memset(jogo, 0, sizeof(*jogo));
     jogo->estado = ESTADO_MENU;
+    jogo->modo = MODO_CAMPANHA;
     jogo->arma_selecionada = ARMA_PISTOLA;
     jogo->fase_atual = 0;
 }
@@ -1154,7 +1160,23 @@ static void atualizar_menu(Jogo *jogo, Assets *assets, bool clicou, Vector2 curs
     if (IsKeyPressed(KEY_ENTER) || (clicou && CheckCollisionPointRec(cursor, botao_jogar())))
     {
         tocar_som_seguro(jogo->sem_audio, assets->clique);
+        jogo->modo = MODO_CAMPANHA;
         jogo->pontuacao = 0;
+        iniciar_fase(jogo, 0);
+        return;
+    }
+
+    if (IsKeyPressed(KEY_S) ||
+        (clicou && CheckCollisionPointRec(cursor, botao_sobrevivencia())))
+    {
+        tocar_som_seguro(jogo->sem_audio, assets->clique);
+        jogo->modo = MODO_SOBREVIVENCIA;
+        jogo->pontuacao = 0;
+        jogo->onda_sobrevivencia = 1;
+        jogo->vida_sobrevivencia = 7;
+        jogo->combo = 0;
+        jogo->maior_combo = 0;
+        jogo->tempo_combo = 0.0f;
         iniciar_fase(jogo, 0);
     }
 }
@@ -1723,11 +1745,17 @@ static void desenhar_menu(const Jogo *jogo, const Assets *assets)
     Rectangle jogar = botao_jogar();
     DrawRectangleRounded(jogar, 0.18f, 8, (Color){210, 70, 78, 255});
     DrawRectangleRoundedLinesEx(jogar, 0.18f, 8, 2.0f, (Color){255, 135, 130, 255});
-    DrawText("JOGAR", 230, 730, 24, RAYWHITE);
+    DrawText("CAMPANHA", 199, 698, 21, RAYWHITE);
 
-    DrawText("PC: ESPAÇO/clique = tiro | 1 2 3 = arma | P = pausa", 58, 825, 13, GRAY);
-    DrawText("Mobile: toque = tiro | toque nos botões = trocar arma", 55, 848, 13, GRAY);
-    DrawText("M = áudio | R = reiniciar fase", 159, 875, 13, GRAY);
+    Rectangle sobrevivencia = botao_sobrevivencia();
+    DrawRectangleRounded(sobrevivencia, 0.18f, 8, (Color){58, 103, 151, 255});
+    DrawRectangleRoundedLinesEx(sobrevivencia, 0.18f, 8, 2.0f, SKYBLUE);
+    DrawText("SOBREVIVÊNCIA", 181, 766, 20, RAYWHITE);
+
+    DrawText("ENTER = campanha | S = sobrevivência", 140, 820, 13, LIGHTGRAY);
+    DrawText("PC: ESPAÇO/clique = tiro | 1 2 3 = arma | P = pausa", 58, 848, 13, GRAY);
+    DrawText("Mobile: toque = tiro | toque nos botões = trocar arma", 55, 871, 13, GRAY);
+    DrawText("M = áudio | R = reiniciar", 173, 898, 13, GRAY);
 }
 
 void jogo_desenhar(const Jogo *jogo, const Assets *assets)
