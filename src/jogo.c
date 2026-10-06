@@ -15,6 +15,7 @@
 
 #define RAIO_PROJETIL_METROS 0.11f
 #define TEMPO_FLASH 0.075f
+#define ARQUIVO_RECORDE "recorde.dat"
 
 static const ConfigArma CONFIG_ARMAS[TOTAL_ARMAS] = {
     [ARMA_PISTOLA] = {
@@ -479,6 +480,48 @@ static void tocar_som_seguro(bool sem_audio, Sound som)
     }
 }
 
+static int carregar_recorde_sobrevivencia(void)
+{
+    FILE *arquivo = fopen(ARQUIVO_RECORDE, "r");
+    if (arquivo == NULL)
+    {
+        return 0;
+    }
+
+    int recorde = 0;
+    if (fscanf(arquivo, "%d", &recorde) != 1 || recorde < 0)
+    {
+        recorde = 0;
+    }
+
+    fclose(arquivo);
+    return recorde;
+}
+
+static void salvar_recorde_sobrevivencia(int recorde)
+{
+    FILE *arquivo = fopen(ARQUIVO_RECORDE, "w");
+    if (arquivo == NULL)
+    {
+        return;
+    }
+
+    fprintf(arquivo, "%d\n", recorde);
+    fclose(arquivo);
+}
+
+static void atualizar_recorde_sobrevivencia(Jogo *jogo)
+{
+    if (jogo->modo != MODO_SOBREVIVENCIA ||
+        jogo->pontuacao <= jogo->recorde_sobrevivencia)
+    {
+        return;
+    }
+
+    jogo->recorde_sobrevivencia = jogo->pontuacao;
+    salvar_recorde_sobrevivencia(jogo->recorde_sobrevivencia);
+}
+
 static bool arma_disparar(Jogo *jogo, Arma *arma, Assets *assets)
 {
     if (arma->cooldown_restante > 0.0f || arma->vida <= 0)
@@ -679,6 +722,8 @@ static void processar_colisao_projetil_arma(
         {
             jogo->pontuacao += 120;
         }
+
+        atualizar_recorde_sobrevivencia(jogo);
     }
     else if (jogo->modo == MODO_SOBREVIVENCIA)
     {
@@ -919,6 +964,7 @@ static void ativar_powerup(Jogo *jogo, Assets *assets, Powerup *powerup, Dono do
     if (dono == DONO_JOGADOR)
     {
         jogo->pontuacao += 80;
+        atualizar_recorde_sobrevivencia(jogo);
     }
 }
 
@@ -1269,6 +1315,7 @@ void jogo_inicializar(Jogo *jogo)
     memset(jogo, 0, sizeof(*jogo));
     jogo->estado = ESTADO_MENU;
     jogo->modo = MODO_CAMPANHA;
+    jogo->recorde_sobrevivencia = carregar_recorde_sobrevivencia();
     jogo->arma_selecionada = ARMA_PISTOLA;
     jogo->fase_atual = 0;
 }
