@@ -1115,6 +1115,37 @@ static void adicionar_obstaculos_sobrevivencia(Jogo *jogo)
     }
 }
 
+static void adicionar_powerups_sobrevivencia(Jogo *jogo)
+{
+    static const Rectangle posicoes[] = {
+        {52.0f, 790.0f, 54.0f, 54.0f},
+        {434.0f, 790.0f, 54.0f, 54.0f},
+        {243.0f, 620.0f, 54.0f, 54.0f}
+    };
+
+    int quantidade = 1 + (jogo->onda_sobrevivencia - 1) / 4;
+    if (quantidade > 3)
+    {
+        quantidade = 3;
+    }
+
+    jogo->quantidade_powerups = quantidade;
+
+    for (int i = 0; i < quantidade; i++)
+    {
+        int deslocamento = (jogo->onda_sobrevivencia + i) % 3;
+        int indice_posicao = (i + deslocamento) % 3;
+        TipoPowerup tipo = (TipoPowerup)GetRandomValue(POWERUP_DUPLO, POWERUP_CAVEIRA);
+
+        jogo->powerups[i] = (Powerup){
+            .ativo = true,
+            .area = posicoes[indice_posicao],
+            .tipo = tipo,
+            .pulso = i * 0.8f
+        };
+    }
+}
+
 static void iniciar_onda_sobrevivencia(Jogo *jogo)
 {
     preparar_mundo_base(jogo);
@@ -1123,6 +1154,7 @@ static void iniciar_onda_sobrevivencia(Jogo *jogo)
     Vector2 posicao_inimigo = {395.0f, 275.0f};
 
     adicionar_obstaculos_sobrevivencia(jogo);
+    adicionar_powerups_sobrevivencia(jogo);
 
     int vida_jogador = jogo->vida_sobrevivencia > 0 ? jogo->vida_sobrevivencia : 7;
 
