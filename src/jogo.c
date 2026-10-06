@@ -1087,6 +1087,34 @@ static void iniciar_fase(Jogo *jogo, int indice)
     jogo->estado = ESTADO_JOGANDO;
 }
 
+static void adicionar_obstaculos_sobrevivencia(Jogo *jogo)
+{
+    static const Rectangle candidatos[] = {
+        {70.0f, 430.0f, 135.0f, 14.0f},
+        {335.0f, 430.0f, 135.0f, 14.0f},
+        {195.0f, 565.0f, 150.0f, 14.0f},
+        {70.0f, 700.0f, 135.0f, 14.0f},
+        {335.0f, 700.0f, 135.0f, 14.0f},
+        {195.0f, 335.0f, 150.0f, 14.0f}
+    };
+
+    int quantidade = 1 + (jogo->onda_sobrevivencia - 1) / 2;
+    if (quantidade > 6)
+    {
+        quantidade = 6;
+    }
+
+    int inicio = (jogo->onda_sobrevivencia - 1) % 6;
+    jogo->quantidade_obstaculos = quantidade;
+
+    for (int i = 0; i < quantidade; i++)
+    {
+        Rectangle area = candidatos[(inicio + i) % 6];
+        jogo->obstaculos[i].area = area;
+        jogo->obstaculos[i].corpo = criar_caixa_estatica(jogo, area);
+    }
+}
+
 static void iniciar_onda_sobrevivencia(Jogo *jogo)
 {
     preparar_mundo_base(jogo);
@@ -1094,10 +1122,7 @@ static void iniciar_onda_sobrevivencia(Jogo *jogo)
     Vector2 posicao_jogador = {145.0f, 275.0f};
     Vector2 posicao_inimigo = {395.0f, 275.0f};
 
-    Rectangle obstaculo = {205.0f, 505.0f, 130.0f, 16.0f};
-    jogo->quantidade_obstaculos = 1;
-    jogo->obstaculos[0].area = obstaculo;
-    jogo->obstaculos[0].corpo = criar_caixa_estatica(jogo, obstaculo);
+    adicionar_obstaculos_sobrevivencia(jogo);
 
     int vida_jogador = jogo->vida_sobrevivencia > 0 ? jogo->vida_sobrevivencia : 7;
 
