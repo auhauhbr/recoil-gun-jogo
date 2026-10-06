@@ -978,10 +978,23 @@ static void atualizar_inimigo(Jogo *jogo, Assets *assets, float delta)
     b2Vec2 frente = {cosf(angulo), sinf(angulo)};
     float alinhamento = frente.x * para_jogador.x + frente.y * para_jogador.y;
 
-    if (alinhamento > 0.48f || inimigo->tempo_ia > 2.15f)
+    float alinhamento_minimo = 0.48f;
+    float tempo_disparo_forcado = 2.15f;
+    float fator_cooldown = 1.0f;
+
+    if (jogo->modo == MODO_SOBREVIVENCIA)
+    {
+        float nivel = (float)(jogo->onda_sobrevivencia - 1);
+        alinhamento_minimo = fmaxf(0.25f, 0.48f - nivel * 0.018f);
+        tempo_disparo_forcado = fmaxf(0.85f, 2.15f - nivel * 0.11f);
+        fator_cooldown = fmaxf(0.58f, 1.0f - nivel * 0.035f);
+    }
+
+    if (alinhamento > alinhamento_minimo || inimigo->tempo_ia > tempo_disparo_forcado)
     {
         if (arma_disparar(jogo, inimigo, assets))
         {
+            inimigo->cooldown_restante *= fator_cooldown;
             inimigo->tempo_ia = 0.0f;
         }
     }
@@ -1168,14 +1181,21 @@ static void iniciar_onda_sobrevivencia(Jogo *jogo)
         vida_jogador
     );
 
+    TipoArma arma_inimigo = (TipoArma)((jogo->onda_sobrevivencia - 1) % TOTAL_ARMAS);
+    int vida_inimigo = 4 + (jogo->onda_sobrevivencia - 1) / 2;
+    if (vida_inimigo > 14)
+    {
+        vida_inimigo = 14;
+    }
+
     criar_arma_fisica(
         jogo,
         &jogo->inimigo,
         DONO_INIMIGO,
-        ARMA_PISTOLA,
+        arma_inimigo,
         posicao_inimigo,
         angulo_para_alvo(posicao_inimigo, posicao_jogador),
-        4
+        vida_inimigo
     );
 
     jogo->estado = ESTADO_JOGANDO;
