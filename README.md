@@ -36,7 +36,7 @@
 
 O jogador usa esse movimento para permanecer na arena, criar ângulos de tiro, aproveitar ricochetes, ativar power-ups e derrotar o rival. O projeto utiliza uma resolução lógica fixa de **540 × 960 (9:16)**, pensada para formato mobile/portrait, mas desenvolvida e testada principalmente no desktop.
 
-A campanha possui **6 fases**, três armas selecionáveis, IA rival, power-ups, pontuação, áudio, partículas e tela de conclusão.
+A campanha possui **6 fases**, três armas selecionáveis, IA rival, power-ups, pontuação, áudio, partículas e tela de conclusão. O jogo também inclui um **modo Sobrevivência** com ondas progressivas, dificuldade crescente, combo de acertos e recorde local.
 
 ## Gameplay
 
@@ -64,6 +64,24 @@ A campanha possui **6 fases**, três armas selecionáveis, IA rival, power-ups, 
     </td>
   </tr>
 </table>
+
+
+## Modo Sobrevivência
+
+O modo **Sobrevivência** reaproveita o mesmo sistema de física da campanha, mas transforma os duelos em uma sequência contínua de ondas. O objetivo é sobreviver pelo maior tempo possível e superar o recorde salvo localmente.
+
+A progressão funciona assim:
+
+- cada onda concluída aumenta a vida e a agressividade do rival;
+- a arma do inimigo alterna entre pistola, revólver e espingarda;
+- novos obstáculos aparecem gradualmente na arena;
+- power-ups são sorteados a cada onda;
+- o jogador recupera **1 ponto de vida** ao vencer uma onda, até o limite inicial;
+- acertos consecutivos formam um combo de até **x8**, aumentando a pontuação;
+- receber dano ou deixar o tempo do combo expirar reinicia o multiplicador;
+- o melhor resultado é salvo em `recorde.dat`, mantido fora do Git pelo `.gitignore`.
+
+No menu principal, pressione `S` ou clique em **SOBREVIVÊNCIA** para iniciar uma tentativa.
 
 ## Referência
 
@@ -275,9 +293,10 @@ cmake --build build
 | `2` | Revólver |
 | `3` | Espingarda |
 | `P` | Pausar / continuar |
-| `R` | Reiniciar fase |
+| `R` | Reiniciar fase / reiniciar tentativa no modo Sobrevivência |
 | `M` | Ativar / desativar áudio |
-| `Enter` | Confirmar / avançar |
+| `Enter` | Confirmar / avançar / iniciar campanha |
+| `S` | Iniciar Sobrevivência a partir do menu |
 | `Esc` | Fechar o jogo |
 
 ## Licença e créditos
