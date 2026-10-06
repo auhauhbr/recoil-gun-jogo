@@ -999,7 +999,7 @@ static void limpar_runtime_fase(Jogo *jogo)
     jogo->quantidade_marcadores_cenario = 0;
 }
 
-static void iniciar_fase(Jogo *jogo, int indice)
+static void preparar_mundo_base(Jogo *jogo)
 {
     if (jogo->mundo_criado)
     {
@@ -1008,7 +1008,6 @@ static void iniciar_fase(Jogo *jogo, int indice)
     }
 
     limpar_runtime_fase(jogo);
-    jogo->fase_atual = indice;
     jogo->tempo_estado = 0.0f;
 
     jogo->arena = (Rectangle){20.0f, 100.0f, 500.0f, 820.0f};
@@ -1018,7 +1017,6 @@ static void iniciar_fase(Jogo *jogo, int indice)
     jogo->chao = (Rectangle){20.0f, 908.0f, 500.0f, 12.0f};
 
     b2WorldDef mundo_def = b2DefaultWorldDef();
-    // Gravidade deliberadamente mais leve que a terrestre: o jogo precisa ser "flutuante".
     mundo_def.gravity = (b2Vec2){0.0f, 6.4f};
     jogo->mundo = b2CreateWorld(&mundo_def);
     jogo->mundo_criado = true;
@@ -1027,6 +1025,17 @@ static void iniciar_fase(Jogo *jogo, int indice)
     criar_caixa_estatica(jogo, jogo->parede_direita);
     criar_caixa_estatica(jogo, jogo->teto);
     criar_caixa_estatica(jogo, jogo->chao);
+}
+
+static float angulo_para_alvo(Vector2 origem, Vector2 alvo)
+{
+    return atan2f(alvo.y - origem.y, alvo.x - origem.x) * RAD_PARA_GRAUS;
+}
+
+static void iniciar_fase(Jogo *jogo, int indice)
+{
+    preparar_mundo_base(jogo);
+    jogo->fase_atual = indice;
 
     DefinicaoFase fase = fase_obter(indice);
 
@@ -1052,15 +1061,8 @@ static void iniciar_fase(Jogo *jogo, int indice)
      * Eu calculo a orientação inicial a partir da posição real dos dois corpos.
      * Desse modo as armas sempre começam olhando uma para a outra.
      */
-    float angulo_jogador = atan2f(
-        fase.posicao_inimigo.y - fase.posicao_jogador.y,
-        fase.posicao_inimigo.x - fase.posicao_jogador.x
-    ) * RAD_PARA_GRAUS;
-
-    float angulo_inimigo = atan2f(
-        fase.posicao_jogador.y - fase.posicao_inimigo.y,
-        fase.posicao_jogador.x - fase.posicao_inimigo.x
-    ) * RAD_PARA_GRAUS;
+    float angulo_jogador = angulo_para_alvo(fase.posicao_jogador, fase.posicao_inimigo);
+    float angulo_inimigo = angulo_para_alvo(fase.posicao_inimigo, fase.posicao_jogador);
 
     criar_arma_fisica(
         jogo,
@@ -1080,6 +1082,43 @@ static void iniciar_fase(Jogo *jogo, int indice)
         fase.posicao_inimigo,
         angulo_inimigo,
         fase.vida_inimigo
+    );
+
+    jogo->estado = ESTADO_JOGANDO;
+}
+
+static void iniciar_onda_sobrevivencia(Jogo *jogo)
+{
+    preparar_mundo_base(jogo);
+
+    Vector2 posicao_jogador = {145.0f, 275.0f};
+    Vector2 posicao_inimigo = {395.0f, 275.0f};
+
+    Rectangle obstaculo = {205.0f, 505.0f, 130.0f, 16.0f};
+    jogo->quantidade_obstaculos = 1;
+    jogo->obstaculos[0].area = obstaculo;
+    jogo->obstaculos[0].corpo = criar_caixa_estatica(jogo, obstaculo);
+
+    int vida_jogador = jogo->vida_sobrevivencia > 0 ? jogo->vida_sobrevivencia : 7;
+
+    criar_arma_fisica(
+        jogo,
+        &jogo->jogador,
+        DONO_JOGADOR,
+        jogo->arma_selecionada,
+        posicao_jogador,
+        angulo_para_alvo(posicao_jogador, posicao_inimigo),
+        vida_jogador
+    );
+
+    criar_arma_fisica(
+        jogo,
+        &jogo->inimigo,
+        DONO_INIMIGO,
+        ARMA_PISTOLA,
+        posicao_inimigo,
+        angulo_para_alvo(posicao_inimigo, posicao_jogador),
+        4
     );
 
     jogo->estado = ESTADO_JOGANDO;
@@ -1177,7 +1216,7 @@ static void atualizar_menu(Jogo *jogo, Assets *assets, bool clicou, Vector2 curs
         jogo->combo = 0;
         jogo->maior_combo = 0;
         jogo->tempo_combo = 0.0f;
-        iniciar_fase(jogo, 0);
+        iniciar_onda_sobrevivencia(jogo);
     }
 }
 
@@ -1277,7 +1316,14 @@ void jogo_atualizar(Jogo *jogo, Assets *assets, float delta)
 
     if (IsKeyPressed(KEY_R))
     {
-        iniciar_fase(jogo, jogo->fase_atual);
+        if (jogo->modo == MODO_SOBREVIVENCIA)
+        {
+            iniciar_onda_sobrevivencia(jogo);
+        }
+        else
+        {
+            iniciar_fase(jogo, jogo->fase_atual);
+        }
         return;
     }
 
