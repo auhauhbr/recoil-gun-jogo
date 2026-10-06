@@ -659,7 +659,31 @@ static void processar_colisao_projetil_arma(
 
     if (projetil->dono == DONO_JOGADOR)
     {
-        jogo->pontuacao += 120;
+        if (jogo->modo == MODO_SOBREVIVENCIA)
+        {
+            jogo->combo++;
+            if (jogo->combo > 8)
+            {
+                jogo->combo = 8;
+            }
+
+            jogo->tempo_combo = 2.8f;
+            if (jogo->combo > jogo->maior_combo)
+            {
+                jogo->maior_combo = jogo->combo;
+            }
+
+            jogo->pontuacao += 120 + (jogo->combo - 1) * 35;
+        }
+        else
+        {
+            jogo->pontuacao += 120;
+        }
+    }
+    else if (jogo->modo == MODO_SOBREVIVENCIA)
+    {
+        jogo->combo = 0;
+        jogo->tempo_combo = 0.0f;
     }
 }
 
@@ -938,6 +962,21 @@ static void atualizar_arma(Arma *arma, float delta)
 {
     arma->cooldown_restante = fmaxf(0.0f, arma->cooldown_restante - delta);
     arma->tempo_flash = fmaxf(0.0f, arma->tempo_flash - delta);
+}
+
+static void atualizar_combo(Jogo *jogo, float delta)
+{
+    if (jogo->modo != MODO_SOBREVIVENCIA || jogo->combo <= 0)
+    {
+        return;
+    }
+
+    jogo->tempo_combo -= delta;
+    if (jogo->tempo_combo <= 0.0f)
+    {
+        jogo->combo = 0;
+        jogo->tempo_combo = 0.0f;
+    }
 }
 
 static void estabilizar_arma(Arma *arma)
@@ -1434,6 +1473,7 @@ void jogo_atualizar(Jogo *jogo, Assets *assets, float delta)
 
     atualizar_arma(&jogo->jogador, delta);
     atualizar_arma(&jogo->inimigo, delta);
+    atualizar_combo(jogo, delta);
 
     bool quer_disparar = IsKeyPressed(KEY_SPACE) || (clicou && !clique_em_interface);
 
